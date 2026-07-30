@@ -9,8 +9,77 @@ import ComplianceSection from "./ComplianceSection";
 import UploadDocuments from "./UploadDocuments";
 import RegistrationTips from "./RegistrationTips";
 import FormButtons from "./FormButtons";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 
 export default function RegisterVehicleLayout() {
+  const router = useRouter();
+  const [formData, setFormData] = useState({
+  vehicle_number: "",
+  brand: "",
+  model: "",
+  vehicle_type: "",
+  manufacturing_year: "",
+  fuel_type: "",
+  capacity: "",
+  chassis_number: "",
+  engine_number: "",
+  registration_date: "",
+  insurance_expiry: "",
+  emission_expiry: "",
+});
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  try {
+    console.log("Form Data:", formData);
+    const response = await fetch("/api/vehicles", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message);
+      return;
+    }
+
+    const vehicleId = data.vehicle.id;
+
+    // Next: Upload documents and call /api/documents
+
+    alert("Vehicle registered successfully!");
+
+  } catch (error) {
+    console.error(error);
+    alert("Something went wrong");
+  }
+};
+
+const [loading, setLoading] = useState(false);
+
+const resetForm = () => {
+  setFormData({
+    vehicle_number: "",
+    brand: "",
+    model: "",
+    vehicle_type: "",
+    manufacturing_year: "",
+    fuel_type: "",
+    capacity: "",
+    chassis_number: "",
+    engine_number: "",
+    registration_date: "",
+    insurance_expiry: "",
+    emission_expiry: "",
+  });
+};
   return (
     <DashboardLayout>
 
@@ -42,9 +111,12 @@ export default function RegisterVehicleLayout() {
                 Cancel
               </button>
 
-              <button className="px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700">
-                Save Vehicle
-              </button>
+              <button
+  type="submit"
+  className="px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700"
+>
+  Save Vehicle
+</button>
 
             </div>
 
@@ -52,22 +124,34 @@ export default function RegisterVehicleLayout() {
 
         <form
   className="mt-8 bg-white rounded-3xl border border-gray-200 overflow-hidden"
-  onSubmit={(e) => {
-    e.preventDefault();
-    alert("Vehicle Registered Successfully!");
-  }}
+  onSubmit={handleSubmit}
 >
 
-  <BasicInfo />
+ <BasicInfo
+  formData={formData}
+  setFormData={setFormData}
+/>
 
-  <OperationalInfo />
+<OperationalInfo
+  formData={formData}
+  setFormData={setFormData}
+/>
 
-  <ComplianceSection />
+<ComplianceSection
+  formData={formData}
+  setFormData={setFormData}
+/>
 
-  <UploadDocuments />
+<UploadDocuments
+  formData={formData}
+  setFormData={setFormData}
+/>
 
-  <FormButtons />
-
+  <FormButtons
+  loading={loading}
+  onReset={resetForm}
+  onCancel={() => router.back()}
+/>
 </form>
 
         </div>

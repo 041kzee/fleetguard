@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 export async function POST(request) {
   try {
     const body = await request.json();
+    console.log("Received Body:", body);
 
     const {
       vehicle_number,
@@ -57,8 +58,19 @@ export async function POST(request) {
       .select()
       .single();
 
-    if (error)
-      return NextResponse.json({ message: error.message }, { status: 500 });
+    if (error) {
+  console.log("Supabase error:", error);
+
+  return NextResponse.json(
+    {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+    },
+    { status: 500 }
+  );
+}
 
     return NextResponse.json(
       {
