@@ -2,7 +2,10 @@
 
 import { Car } from "lucide-react";
 
-export default function BasicInfo() {
+export default function BasicInfo({
+  formData,
+  setFormData,
+}) {
   return (
     <section className="p-8 border-b border-gray-200">
 
@@ -41,6 +44,13 @@ export default function BasicInfo() {
           <input
             type="text"
             placeholder="KA-01-AB-1234"
+            value={formData.vehicle_number}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                vehicle_number: e.target.value,
+              })
+            }
             className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
@@ -54,13 +64,20 @@ export default function BasicInfo() {
             Manufacturer *
           </label>
 
-          <select className="w-full rounded-xl border border-gray-300 px-4 py-3">
-
-            <option>Select Manufacturer</option>
-            <option>Tata</option>
-            <option>Mahindra</option>
-            <option>Ashok Leyland</option>
-
+          <select
+            value={formData.brand}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                brand: e.target.value,
+              })
+            }
+            className="w-full rounded-xl border border-gray-300 px-4 py-3"
+          >
+            <option value="">Select Manufacturer</option>
+            <option value="Tata">Tata</option>
+            <option value="Mahindra">Mahindra</option>
+            <option value="Ashok Leyland">Ashok Leyland</option>
           </select>
 
         </div>
@@ -76,6 +93,13 @@ export default function BasicInfo() {
           <input
             type="text"
             placeholder="Model"
+            value={formData.model}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                model: e.target.value,
+              })
+            }
             className="w-full rounded-xl border border-gray-300 px-4 py-3"
           />
 
@@ -89,18 +113,25 @@ export default function BasicInfo() {
             Vehicle Type *
           </label>
 
-          <select className="w-full rounded-xl border border-gray-300 px-4 py-3">
-
-            <option>Select Type</option>
-            <option>Truck</option>
-            <option>Bus</option>
-            <option>Van</option>
-
+          <select
+            value={formData.vehicle_type}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                vehicle_type: e.target.value,
+              })
+            }
+            className="w-full rounded-xl border border-gray-300 px-4 py-3"
+          >
+            <option value="">Select Type</option>
+            <option value="Truck">Truck</option>
+            <option value="Bus">Bus</option>
+            <option value="Van">Van</option>
           </select>
 
         </div>
 
-        {/* Year */}
+        {/* Manufacturing Year */}
 
         <div>
 
@@ -111,12 +142,19 @@ export default function BasicInfo() {
           <input
             type="number"
             placeholder="2024"
+            value={formData.manufacturing_year}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                manufacturing_year: e.target.value,
+              })
+            }
             className="w-full rounded-xl border border-gray-300 px-4 py-3"
           />
 
         </div>
 
-        {/* Fuel */}
+        {/* Fuel Type */}
 
         <div>
 
@@ -124,18 +162,25 @@ export default function BasicInfo() {
             Fuel Type *
           </label>
 
-          <select className="w-full rounded-xl border border-gray-300 px-4 py-3">
-
-            <option>Select Fuel</option>
-            <option>Diesel</option>
-            <option>Petrol</option>
-            <option>Electric</option>
-
+          <select
+            value={formData.fuel_type}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                fuel_type: e.target.value,
+              })
+            }
+            className="w-full rounded-xl border border-gray-300 px-4 py-3"
+          >
+            <option value="">Select Fuel</option>
+            <option value="Diesel">Diesel</option>
+            <option value="Petrol">Petrol</option>
+            <option value="Electric">Electric</option>
           </select>
 
         </div>
 
-        {/* Color */}
+        {/* Color (UI only) */}
 
         <div>
 
@@ -151,17 +196,24 @@ export default function BasicInfo() {
 
         </div>
 
-        {/* VIN */}
+        {/* VIN (Maps to Chassis Number) */}
 
         <div>
 
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            VIN Number
+            VIN / Chassis Number
           </label>
 
           <input
             type="text"
             placeholder="Vehicle Identification Number"
+            value={formData.chassis_number}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                chassis_number: e.target.value,
+              })
+            }
             className="w-full rounded-xl border border-gray-300 px-4 py-3"
           />
 

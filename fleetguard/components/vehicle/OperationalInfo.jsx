@@ -2,7 +2,10 @@
 
 import { Settings } from "lucide-react";
 
-export default function OperationalInfo() {
+export default function OperationalInfo({
+  formData,
+  setFormData,
+}) {
   return (
     <section className="p-8 border-b border-gray-200">
 
@@ -20,40 +23,52 @@ export default function OperationalInfo() {
           </h2>
 
           <p className="text-gray-500 text-sm">
-            Configure operational settings and fleet assignment details.
+            Configure operational settings and fleet details.
           </p>
         </div>
 
       </div>
 
-      {/* Form */}
-
       <div className="grid grid-cols-2 gap-6">
 
-        {/* Current Mileage */}
+        {/* Capacity */}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Current Mileage (km)
+            Vehicle Capacity *
           </label>
 
           <input
             type="number"
-            placeholder="25000"
+            placeholder="40"
+            value={formData.capacity}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                capacity: e.target.value,
+              })
+            }
             className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
-        {/* Service Interval */}
+        {/* Engine Number */}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Service Interval (km)
+            Engine Number *
           </label>
 
           <input
-            type="number"
-            placeholder="10000"
+            type="text"
+            placeholder="ENG123456789"
+            value={formData.engine_number}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                engine_number: e.target.value,
+              })
+            }
             className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>

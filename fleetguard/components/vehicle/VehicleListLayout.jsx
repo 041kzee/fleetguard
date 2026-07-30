@@ -7,8 +7,14 @@ import VehicleStats from "./VehicleStats";
 import VehicleFilters from "./VehicleFilters";
 import VehicleTable from "./VehicleTable";
 import VehiclePagination from "./VehiclePagination";
+import { useRouter } from "next/navigation";
+
+
 
 export default function VehicleListLayout() {
+  const router = useRouter();
+
+
   return (
     <DashboardLayout>
       <div className="space-y-8">
@@ -35,7 +41,9 @@ export default function VehicleListLayout() {
               Import CSV
             </button>
 
-            <button className="flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700">
+            <button onClick={() => {
+              router.push("/vehicles/register");
+            }} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700">
 
               <Plus size={18} />
 
