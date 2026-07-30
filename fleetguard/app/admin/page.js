@@ -8,7 +8,7 @@ import Link from "next/link";
 export default function Login() {
   
   const router = useRouter();
-  const [role, setRole] = useState("FLEET_MANAGER"); // ADMIN, FLEET_MANAGER, DRIVER
+  const [role, setRole] = useState("ADMIN"); // ADMIN, FLEET_MANAGER, DRIVER
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -20,10 +20,7 @@ export default function Login() {
     setLoading(true);
     setError("");
 
-let endpoint =
-  role === "FLEET_MANAGER"
-    ? "/api/auth/fleet-manager/login"
-    : "/api/auth/driver/login";
+    const endpoint = "/api/auth/admin/login";
 
     try {
       const res = await fetch(endpoint, {
@@ -126,28 +123,16 @@ let endpoint =
           {/* Role Tabs */}
          <div className="flex p-1 bg-[#eff4ff] rounded-xl mb-6 text-xs font-semibold">
   <button
-    type="button"
-    onClick={() => setRole("FLEET_MANAGER")}
-    className={`flex-1 py-2 rounded-lg transition-all ${
-      role === "FLEET_MANAGER"
-        ? "bg-white text-[#004ac6] shadow-xs"
-        : "text-[#565e74] hover:text-[#0b1c30]"
-    }`}
-  >
-    Fleet Manager
-  </button>
-
-  <button
-    type="button"
-    onClick={() => setRole("DRIVER")}
-    className={`flex-1 py-2 rounded-lg transition-all ${
-      role === "DRIVER"
-        ? "bg-white text-[#004ac6] shadow-xs"
-        : "text-[#565e74] hover:text-[#0b1c30]"
-    }`}
-  >
-    Driver
-  </button>
+  type="button"
+  onClick={() => setRole("ADMIN")}
+  className={`flex-1 py-2 rounded-lg transition-all ${
+    role === "ADMIN"
+      ? "bg-white text-[#004ac6] shadow-xs"
+      : "text-[#565e74] hover:text-[#0b1c30]"
+  }`}
+>
+  Admin
+</button>
 </div>
 
           {error && (
