@@ -1,49 +1,141 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
-export default function Header({ title, subtitle, onActionClick, actionLabel = "+ Add Vehicle" }) {
+export default function Header({
+  title,
+  subtitle,
+  activeTab = "Assignments",
+  onActionClick,
+  actionLabel = "New Assignment",
+}) {
+  const pathname = usePathname();
+
+  const topNavs = [
+    { name: "Dashboard", href: "/dashboard" },
+    { name: "Fleet", href: "/vehicles" },
+    { name: "Drivers", href: "/users" },
+    { name: "Assignments", href: "/history" },
+    { name: "Reports", href: "/compliance" },
+  ];
+
   return (
-    <header className="h-16 bg-white border-b border-[#e2e8f0] px-8 flex items-center justify-between sticky top-0 z-20 shadow-xs">
-      <div>
-        <h1 className="text-xl font-bold text-[#0b1c30] tracking-tight">{title}</h1>
-        {subtitle && <p className="text-xs text-[#565e74]">{subtitle}</p>}
-      </div>
+    <header className="sticky top-0 z-20 bg-white border-b border-[#e2e8f0] shadow-sm">
+      <div className="h-16 px-6 flex items-center justify-between">
 
-      <div className="flex items-center gap-4">
-        {/* Global Search Input */}
-        <div className="relative w-64 hidden sm:block">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#737686] text-[18px]">
-            search
-          </span>
-          <input
-            type="text"
-            placeholder="Search vehicles, drivers..."
-            className="w-full pl-9 pr-4 py-1.5 bg-[#f8f9ff] border border-[#e2e8f0] rounded-lg text-xs text-[#0b1c30] focus:outline-none focus:ring-2 focus:ring-[#004ac6]/20 focus:border-[#004ac6] transition-all"
-          />
+        {/* Left Section */}
+        <div className="flex items-center gap-8">
+
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-[#004ac6] text-white flex items-center justify-center">
+              <span className="material-symbols-outlined">
+                local_shipping
+              </span>
+            </div>
+
+            <span className="font-bold text-lg text-[#0b1c30]">
+              FleetGuard
+            </span>
+          </Link>
+
+          <nav className="hidden lg:flex items-center gap-2">
+            {topNavs.map((nav) => {
+              const active =
+                pathname.startsWith(nav.href) ||
+                activeTab === nav.name;
+
+              return (
+                <Link
+                  key={nav.name}
+                  href={nav.href}
+                  className={`px-4 py-2 rounded-lg text-sm transition ${
+                    active
+                      ? "text-[#004ac6] border-b-2 border-[#004ac6] font-semibold"
+                      : "text-[#565e74] hover:text-[#0b1c30]"
+                  }`}
+                >
+                  {nav.name}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
+                {/* Right Section */}
+        <div className="flex items-center gap-4">
 
-        {/* Notification Bell */}
-        <Link
-          href="/notifications"
-          className="relative p-2 text-[#565e74] hover:text-[#0b1c30] hover:bg-[#eff4ff] rounded-lg transition-colors"
-          title="Notifications"
-        >
-          <span className="material-symbols-outlined text-[20px]">notifications</span>
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#ef4444] rounded-full ring-2 ring-white"></span>
-        </Link>
+          {/* Notifications */}
+          <Link
+            href="/notifications"
+            className="relative p-2 rounded-full hover:bg-[#eff4ff] transition"
+          >
+            <span className="material-symbols-outlined text-[#565e74]">
+              notifications
+            </span>
 
-        {/* Action Button */}
-        {onActionClick && (
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500"></span>
+          </Link>
+
+          {/* Settings */}
+          <Link
+            href="/settings"
+            className="p-2 rounded-full hover:bg-[#eff4ff] transition"
+          >
+            <span className="material-symbols-outlined text-[#565e74]">
+              settings
+            </span>
+          </Link>
+
+          {/* Profile */}
+          <div className="flex items-center gap-3 border-l border-[#e2e8f0] pl-4">
+            <div className="w-9 h-9 rounded-full bg-[#004ac6] flex items-center justify-center text-white">
+              <span className="material-symbols-outlined">
+                account_circle
+              </span>
+            </div>
+
+            <div className="hidden md:block">
+              <p className="text-sm font-semibold text-[#0b1c30]">
+                Fleet Manager
+              </p>
+              <p className="text-xs text-[#565e74]">
+                Online
+              </p>
+            </div>
+          </div>
+
+          {/* Primary Action Button */}
           <button
             onClick={onActionClick}
-            className="primary-btn-interaction flex items-center gap-2 px-4 py-2 bg-[#2563eb] text-white text-xs font-semibold rounded-lg shadow-md shadow-[#2563eb]/20 hover:bg-[#004ac6] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
+            className="px-5 py-2.5 bg-[#004ac6] hover:bg-[#003ea8] text-white rounded-xl font-semibold text-sm shadow-md transition flex items-center gap-2"
           >
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            <span>{actionLabel}</span>
+            <span className="material-symbols-outlined text-[18px]">
+              add
+            </span>
+
+            {actionLabel}
           </button>
-        )}
+
+        </div>
       </div>
+            {/* Page Header */}
+      {(title || subtitle) && (
+        <div className="border-t border-[#eef2f7] bg-[#f8f9ff] px-6 py-5">
+          <div className="max-w-7xl">
+            {title && (
+              <h1 className="text-2xl font-bold tracking-tight text-[#0b1c30]">
+                {title}
+              </h1>
+            )}
+
+            {subtitle && (
+              <p className="mt-1 text-sm text-[#565e74]">
+                {subtitle}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }
