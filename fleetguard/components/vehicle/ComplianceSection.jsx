@@ -99,25 +99,54 @@ export default function ComplianceSection({
 
         {/* Compliance Status */}
 
-        <div>
+<div>
 
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Current Compliance Status
-          </label>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Current Compliance Status
+  </label>
 
-          <div className="flex items-center h-12.5 px-4 rounded-xl bg-green-50 border border-green-200">
+  {(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-            <div className="w-3 h-3 rounded-full bg-green-500 mr-3"></div>
+    const dates = [
+      formData.insurance_expiry,
+      formData.emission_expiry,
+    ].filter(Boolean);
 
-            <span className="font-medium text-green-700">
-              Compliant
-            </span>
+    const isExpired = dates.some((date) => {
+      const expiry = new Date(date);
+      expiry.setHours(0, 0, 0, 0);
+      return expiry < today;
+    });
 
-          </div>
+    return (
+      <div
+        className={`flex items-center h-12.5 px-4 rounded-xl border ${
+          isExpired
+            ? "bg-red-50 border-red-200"
+            : "bg-green-50 border-green-200"
+        }`}
+      >
+        <div
+          className={`w-3 h-3 rounded-full mr-3 ${
+            isExpired ? "bg-red-500" : "bg-green-500"
+          }`}
+        ></div>
 
-        </div>
-
+        <span
+          className={`font-medium ${
+            isExpired ? "text-red-700" : "text-green-700"
+          }`}
+        >
+          {isExpired ? "Inactive" : "Compliant"}
+        </span>
       </div>
+    );
+  })()}
+
+</div>
+</div>
 
       {/* Info Box */}
 

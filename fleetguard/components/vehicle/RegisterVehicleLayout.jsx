@@ -29,7 +29,11 @@ export default function RegisterVehicleLayout() {
   insurance_expiry: "",
   emission_expiry: "",
 });
-
+const [documents, setDocuments] = useState({
+  INSURANCE: null,
+  RC: null,
+  EMISSION: null,
+});
 const handleSubmit = async (e) => {
   e.preventDefault();
 
@@ -52,9 +56,20 @@ const handleSubmit = async (e) => {
 
     const vehicleId = data.vehicle.id;
 
-    // Next: Upload documents and call /api/documents
+await uploadAllDocuments(vehicleId);
 
-    alert("Vehicle registered successfully!");
+// Reset all input fields
+resetForm();
+
+// Reset uploaded files
+setDocuments({
+  INSURANCE: null,
+  RC: null,
+  EMISSION: null,
+});
+
+// Success popup
+alert("Vehicle registered successfully!");
 
   } catch (error) {
     console.error(error);
@@ -79,6 +94,65 @@ const resetForm = () => {
     insurance_expiry: "",
     emission_expiry: "",
   });
+
+  setDocuments({
+    INSURANCE: null,
+    RC: null,
+    EMISSION: null,
+  });
+};
+
+const uploadAllDocuments = async (vehicleId) => {
+  const uploads = [
+    {
+      type: "INSURANCE",
+      file: documents.INSURANCE,
+      expiry: formData.insurance_expiry,
+      issue: formData.registration_date,
+    },
+    {
+      type: "RC",
+      file: documents.RC,
+      expiry: null,
+      issue: formData.registration_date,
+    },
+    {
+      type: "EMISSION",
+      file: documents.EMISSION,
+      expiry: formData.emission_expiry,
+      issue: formData.registration_date,
+    },
+  ];
+
+  for (const doc of uploads) {
+    if (!doc.file) continue;
+
+    const fd = new FormData();
+
+fd.append("vehicle_id", vehicleId);
+fd.append("document_type", doc.type);
+fd.append("document_number", "");
+
+if (doc.issue) {
+  fd.append("issue_date", doc.issue);
+}
+
+if (doc.expiry) {
+  fd.append("expiry_date", doc.expiry);
+}
+
+fd.append("file", doc.file);
+
+    const response = await fetch("/api/documents", {
+      method: "POST",
+      body: fd,
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.message);
+    }
+  }
 };
   return (
     <DashboardLayout>
@@ -143,8 +217,8 @@ const resetForm = () => {
 />
 
 <UploadDocuments
-  formData={formData}
-  setFormData={setFormData}
+  documents={documents}
+  setDocuments={setDocuments}
 />
 
   <FormButtons
