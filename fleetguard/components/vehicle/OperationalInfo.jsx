@@ -30,30 +30,30 @@ export default function OperationalInfo() {
 
       <div className="grid grid-cols-2 gap-6">
 
-        {/* Current Mileage */}
+        {/* Chassis Number */}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Current Mileage (km)
+            Chassis Number *
           </label>
 
           <input
-            type="number"
-            placeholder="25000"
+            type="text"
+            placeholder="Enter chassis number"
             className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
-        {/* Service Interval */}
+        {/* Engine Number */}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Service Interval (km)
+            Engine Number *
           </label>
 
           <input
-            type="number"
-            placeholder="10000"
+            type="text"
+            placeholder="Enter engine number"
             className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
