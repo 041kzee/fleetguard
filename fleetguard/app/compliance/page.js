@@ -39,6 +39,18 @@ export default function CompliancePage() {
         />
 
         <main className="p-8 space-y-8 flex-1 animate-fade-up">
+          <div className="flex justify-end">
+  <button
+    onClick={() => setIsUploadOpen(true)}
+    className="flex items-center gap-2 bg-[#004ac6] hover:bg-[#003ea8] text-white px-5 py-3 rounded-xl font-semibold shadow-md transition-all duration-200"
+  >
+    <span className="material-symbols-outlined text-[20px]">
+      upload_file
+    </span>
+
+    Upload Document
+  </button>
+</div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <MetricBlock
               title="Compliant Vehicles"
