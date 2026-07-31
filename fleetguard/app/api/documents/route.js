@@ -55,14 +55,14 @@ export async function POST(request) {
 
         const { data, error } = await supabase
             .from("documents")
-            .insert({
-                vehicle_id,
-                document_type,
-                document_number,
-                issue_date,
-                expiry_date,
-                file_url: fileName,
-            })
+.insert({
+    vehicle_id,
+    document_type,
+    document_number: document_number || null,
+    issue_date: issue_date || null,
+    expiry_date: expiry_date || null,
+    file_url: fileName,
+})
             .select()
             .single();
 

@@ -2,7 +2,12 @@
 
 import { ShieldCheck } from "lucide-react";
 
-export default function ComplianceSection() {
+export default function ComplianceSection({
+  formData,
+  setFormData,
+}) 
+
+{
   return (
     <section className="p-8 border-b border-gray-200">
 
@@ -40,6 +45,13 @@ export default function ComplianceSection() {
           <input
             type="date"
             className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+             value={formData.insurance_expiry}
+  onChange={(e) =>
+    setFormData({
+      ...formData,
+      insurance_expiry: e.target.value,
+    })
+  }
           />
         </div>
 
@@ -47,12 +59,19 @@ export default function ComplianceSection() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Inspection Expiry *
+            Registration Date *
           </label>
 
           <input
             type="date"
             className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+             value={formData.registration_date}
+  onChange={(e) =>
+    setFormData({
+      ...formData,
+      registration_date: e.target.value,
+    })
+  }
           />
         </div>
 
@@ -66,30 +85,68 @@ export default function ComplianceSection() {
           <input
             type="date"
             className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+            
+  value={formData.emission_expiry}
+  onChange={(e) =>
+    setFormData({
+      ...formData,
+      emission_expiry: e.target.value,
+    })
+  }
+/>
+          
         </div>
 
         {/* Compliance Status */}
 
-        <div>
+<div>
 
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Current Compliance Status
-          </label>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Current Compliance Status
+  </label>
 
-          <div className="flex items-center h-[50px] px-4 rounded-xl bg-green-50 border border-green-200">
+  {(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-            <div className="w-3 h-3 rounded-full bg-green-500 mr-3"></div>
+    const dates = [
+      formData.insurance_expiry,
+      formData.emission_expiry,
+    ].filter(Boolean);
 
-            <span className="font-medium text-green-700">
-              Compliant
-            </span>
+    const isExpired = dates.some((date) => {
+      const expiry = new Date(date);
+      expiry.setHours(0, 0, 0, 0);
+      return expiry < today;
+    });
 
-          </div>
+    return (
+      <div
+        className={`flex items-center h-12.5 px-4 rounded-xl border ${
+          isExpired
+            ? "bg-red-50 border-red-200"
+            : "bg-green-50 border-green-200"
+        }`}
+      >
+        <div
+          className={`w-3 h-3 rounded-full mr-3 ${
+            isExpired ? "bg-red-500" : "bg-green-500"
+          }`}
+        ></div>
 
-        </div>
-
+        <span
+          className={`font-medium ${
+            isExpired ? "text-red-700" : "text-green-700"
+          }`}
+        >
+          {isExpired ? "Inactive" : "Compliant"}
+        </span>
       </div>
+    );
+  })()}
+
+</div>
+</div>
 
       {/* Info Box */}
 
