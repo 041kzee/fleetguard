@@ -1,61 +1,50 @@
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 
+export async function POST(req) {
+  const { email, password } = await req.json();
 
-export async function POST(req){
+  try {
 
-const {
-email,
-password
-}=await req.json();
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
 
+    const token = await userCredential.user.getIdToken();
 
-if(email !== process.env.ADMIN_EMAIL){
+    const { data } = await supabase
+      .from("users")
+      .select("*")
+      .eq("firebase_uid", userCredential.user.uid)
+      .single();
 
-return Response.json(
-{
-message:"Unauthorized"
-},
-{
-status:401
-}
-);
+    if (!data) {
+      return Response.json(
+        { message: "User not found" },
+        { status: 404 }
+      );
+    }
 
-}
+    if (data.role !== "ADMIN") {
+      return Response.json(
+        { message: "You are not an Admin." },
+        { status: 403 }
+      );
+    }
 
+    return Response.json({
+      message: "Admin login successful",
+      token,
+      user: data,
+    });
 
-try{
-
-const user =
-await signInWithEmailAndPassword(
-auth,
-email,
-password
-);
-
-
-return Response.json({
-
-message:"Admin login successful",
-
-uid:user.user.uid
-
-});
-
-
-}
-
-catch(error){
-
-return Response.json(
-{
-message:error.message
-},
-{
-status:400
-}
-);
-
-}
-
+  } catch (err) {
+    return Response.json(
+      { message: err.message },
+      { status: 400 }
+    );
+  }
 }
