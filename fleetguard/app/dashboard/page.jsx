@@ -57,35 +57,35 @@ export default function DashboardPage() {
         </div>
 
       </div>
-   <StatsCards />
+      <StatsCards />
 
-<div className="grid grid-cols-12 gap-6 mt-8">
+      <div className="grid grid-cols-12 gap-6 mt-8">
 
-  {/* LEFT */}
+        {/* LEFT */}
 
-  <div className="col-span-8">
+        <div className="col-span-8">
 
-    <ExpiryTable />
+          <ExpiryTable />
 
-    <MaintenanceRisk />
-    <QuickActions/>
+          <MaintenanceRisk />
+          <QuickActions />
 
-  </div>
+        </div>
 
-  {/* RIGHT */}
+        {/* RIGHT */}
 
-  <div className="col-span-4">
+        <div className="col-span-4">
 
-    <ComplianceHealth />
+          <ComplianceHealth />
 
-    <RecentActivity />
-    <CriticalAlerts/>
-<FleetInsights />
+          <RecentActivity />
+          <CriticalAlerts />
+          <FleetInsights />
 
-  </div>
+        </div>
 
-</div>
-<Footer />
+      </div>
+      <Footer />
     </DashboardLayout>
   );
 }
