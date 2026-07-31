@@ -6,7 +6,7 @@ import Header from "@/components/ui/Header";
 
 export default function HistoryPage() {
   // Navigation / View state: 'flow' shows the assignment workflow card (reference image), 'table' shows complete history log table
-  const [activeView, setActiveView] = useState("flow"); 
+  const [activeView, setActiveView] = useState("table"); 
 
   // Form State matching reference screenshot
   const [driverSearch, setDriverSearch] = useState("");
@@ -32,6 +32,7 @@ export default function HistoryPage() {
   const [historySearch, setHistorySearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedLog, setSelectedLog] = useState(null);
+  
 
   // Historical Records Data
   const [historyRecords, setHistoryRecords] = useState([
@@ -126,8 +127,54 @@ export default function HistoryPage() {
       notes: "Short-term regional distribution",
     },
   ]);
+const [overrideLogs] = useState([
+  {
+    id: "OVR-001",
+    date: "30 Jul 2026",
+    time: "10:20 AM",
+    overriddenBy: "Fleet Manager",
+    type: "Driver Changed",
+    previous: "Marcus Chen",
+    updated: "Sara Miller",
+    reason: "Driver unavailable",
+  },
+  {
+    id: "OVR-002",
+    date: "29 Jul 2026",
+    time: "03:45 PM",
+    overriddenBy: "Admin",
+    type: "Vehicle Changed",
+    previous: "FG-782-X",
+    updated: "FG-551-M",
+    reason: "Vehicle breakdown",
+  },
+  {
+    id: "OVR-003",
+    date: "28 Jul 2026",
+    time: "11:15 AM",
+    overriddenBy: "Dispatcher",
+    type: "Assignment Closed",
+    previous: "James Wilson",
+    updated: "Assignment Closed",
+    reason: "Trip completed",
+  },
+  {
+    id: "OVR-004",
+    date: "27 Jul 2026",
+    time: "09:10 AM",
+    overriddenBy: "Fleet Manager",
+    type: "Driver Reassigned",
+    previous: "David Kim",
+    updated: "Ray Baxter",
+    reason: "Shift change",
+  },
+]);
+
+
+  
 
   const handleConfirmAssignment = (e) => {
+    
     e.preventDefault();
     const newRecord = {
       id: `ASN-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
@@ -738,7 +785,75 @@ export default function HistoryPage() {
                   </table>
                 </div>
               </div>
+              {/* Assignment Override Logs */}
+<div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs overflow-hidden">
+  <div className="px-6 py-4 border-b border-[#e2e8f0] flex items-center justify-between">
+    <div>
+      <h2 className="text-base font-bold text-[#0b1c30]">
+        Assignment Override Logs
+      </h2>
+      <p className="text-xs text-[#737686]">
+        Manual changes performed by authorized users.
+      </p>
+    </div>
+
+    <span className="px-3 py-1 rounded-full bg-[#dce9ff] text-[#004ac6] text-xs font-semibold">
+      {overrideLogs.length} Logs
+    </span>
+  </div>
+
+  <div className="overflow-x-auto">
+    <table className="w-full text-left text-xs">
+      <thead className="bg-[#f8fafc] border-b border-[#e2e8f0] uppercase text-[10px] text-[#737686]">
+        <tr>
+          <th className="px-6 py-4">Log ID</th>
+          <th className="px-6 py-4">Date</th>
+          <th className="px-6 py-4">Overridden By</th>
+          <th className="px-6 py-4">Type</th>
+          <th className="px-6 py-4">Previous</th>
+          <th className="px-6 py-4">Updated</th>
+          <th className="px-6 py-4">Reason</th>
+        </tr>
+      </thead>
+
+      <tbody className="divide-y divide-[#e2e8f0]">
+        {overrideLogs.map((log) => (
+          <tr
+            key={log.id}
+            className="hover:bg-[#f8fafc] transition-colors"
+          >
+            <td className="px-6 py-4 font-mono font-bold text-[#004ac6]">
+              {log.id}
+            </td>
+
+            <td className="px-6 py-4">
+              <div className="font-medium">{log.date}</div>
+              <div className="text-[10px] text-[#737686]">
+                {log.time}
+              </div>
+            </td>
+
+            <td className="px-6 py-4">{log.overriddenBy}</td>
+
+            <td className="px-6 py-4">
+              <span className="px-2 py-1 rounded-md bg-[#dce9ff] text-[#004ac6] font-semibold">
+                {log.type}
+              </span>
+            </td>
+
+            <td className="px-6 py-4">{log.previous}</td>
+
+            <td className="px-6 py-4">{log.updated}</td>
+
+            <td className="px-6 py-4">{log.reason}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
             </div>
+            
           )}
 
           {/* Record Detail Modal */}
