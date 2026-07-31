@@ -183,8 +183,6 @@ export async function POST(req) {
                     driver_id:
                     driver.id,
 
-                    fleet_manager_id,
-
                     status:"ACTIVE"
 
                 })

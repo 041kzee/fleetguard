@@ -1,3 +1,4 @@
+'use client';
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import StatsCards from "@/components/dashboard/StatsCards";
 import ExpiryTable from "@/components/dashboard/ExpiryTable";
@@ -8,7 +9,18 @@ import QuickActions from "@/components/dashboard/QuickActions";
 import CriticalAlerts from "@/components/dashboard/CriticalAlerts";
 import FleetInsights from "@/components/dashboard/FleetInsights";
 import Footer from "@/components/dashboard/Footer";
+import {useRouter} from "next/navigation";
 export default function DashboardPage() {
+  const router = useRouter();
+
+  const handleRegisterVehicle = () => {
+    router.push("/vehicles");
+  };
+
+  const handleAssignVehicle = () => {
+    router.push("/assignments");
+  }
+
   return (
     <DashboardLayout>
 
@@ -30,46 +42,50 @@ export default function DashboardPage() {
 
         <div className="flex gap-4">
 
-          <button className="border rounded-xl px-6 py-3 font-medium hover:bg-gray-50">
+          <button
+          onClick={handleAssignVehicle} className="border rounded-xl px-6 py-3 font-medium 
+          hover:bg-blue-300">
             Assign Vehicle
           </button>
 
-          <button className="bg-blue-600 text-white rounded-xl px-6 py-3 hover:bg-blue-700">
+          <button
+          onClick={handleRegisterVehicle}
+          className="bg-blue-600 text-white rounded-xl px-6 py-3 hover:bg-blue-700">
             Register Vehicle
           </button>
 
         </div>
 
       </div>
-   <StatsCards />
+      <StatsCards />
 
-<div className="grid grid-cols-12 gap-6 mt-8">
+      <div className="grid grid-cols-12 gap-6 mt-8">
 
-  {/* LEFT */}
+        {/* LEFT */}
 
-  <div className="col-span-8">
+        <div className="col-span-8">
 
-    <ExpiryTable />
+          <ExpiryTable />
 
-    <MaintenanceRisk />
-    <QuickActions/>
+          <MaintenanceRisk />
+          <QuickActions />
 
-  </div>
+        </div>
 
-  {/* RIGHT */}
+        {/* RIGHT */}
 
-  <div className="col-span-4">
+        <div className="col-span-4">
 
-    <ComplianceHealth />
+          <ComplianceHealth />
 
-    <RecentActivity />
-    <CriticalAlerts/>
-<FleetInsights />
+          <RecentActivity />
+          <CriticalAlerts />
+          <FleetInsights />
 
-  </div>
+        </div>
 
-</div>
-<Footer />
+      </div>
+      <Footer />
     </DashboardLayout>
   );
 }

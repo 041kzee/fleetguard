@@ -1,39 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/dashboard/Sidebar";
 import Header from "@/components/dashboard/Navbar";
 
 export default function HistoryPage() {
-  // Navigation / View state: 'flow' shows the assignment workflow card (reference image), 'table' shows complete history log table
-  const [activeView, setActiveView] = useState("flow"); 
+  // Navigation / View state: 'flow' shows the assignment workflow card, 'table' shows complete history log table
+  const [activeView, setActiveView] = useState("flow");
 
-  // Form State matching reference screenshot
+  // Search inputs
   const [driverSearch, setDriverSearch] = useState("");
   const [vehicleSearch, setVehicleSearch] = useState("");
-  const [selectedDriver, setSelectedDriver] = useState({
-    name: "Marcus Chen",
-    empId: "FG-9921-MC",
-    license: "Class A (CDL)",
-    status: "Available",
-    avatar: "MC",
-  });
-  const [selectedVehicle, setSelectedVehicle] = useState({
-    registration: "FG-782-X",
-    model: "Fuso eCanter 2024",
-    mileage: "12,450 km",
-  });
-  const [startDate, setStartDate] = useState("2023-11-15");
+
+  // Backend data
+  const [drivers, setDrivers] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [filteredDrivers, setFilteredDrivers] = useState([]);
+  const [filteredVehicles, setFilteredVehicles] = useState([]);
+  const [vehiclesLoading, setVehiclesLoading] = useState(true);
+  const [vehiclesError, setVehiclesError] = useState("");
+
+  // Selection state — null until the user actually picks something.
+  // No more hardcoded default driver/vehicle objects.
+  const [selectedDriver, setSelectedDriver] = useState(null);
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
+
+  const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [notes, setNotes] = useState("");
   const [isSavedAlert, setIsSavedAlert] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   // Table Filter & Search State for Full History Log
   const [historySearch, setHistorySearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedLog, setSelectedLog] = useState(null);
 
-  // Historical Records Data
+  // NOTE: there's no GET /api/assignments endpoint in the spec you gave me,
+  // so this history log stays as local/demo data for now. Newly confirmed
+  // assignments get prepended to it optimistically so the UI still reflects
+  // what you just did. Swap this for a real fetch once that endpoint exists.
   const [historyRecords, setHistoryRecords] = useState([
     {
       id: "ASN-2023-991",
@@ -127,27 +133,139 @@ export default function HistoryPage() {
     },
   ]);
 
-  const handleConfirmAssignment = (e) => {
-    e.preventDefault();
-    const newRecord = {
-      id: `ASN-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
-      driver: selectedDriver.name,
-      empId: selectedDriver.empId,
-      license: selectedDriver.license,
-      vehicle: selectedVehicle.registration,
-      model: selectedVehicle.model,
-      startDate: startDate || "2023-11-15",
-      endDate: endDate || "Indefinite",
-      status: "ACTIVE",
-      region: "North Region",
-      mileage: selectedVehicle.mileage,
-      compliance: "Valid",
-      notes: notes || "Newly confirmed assignment via Operations Hub",
-    };
+  // Compliance is derived entirely on the frontend from insurance_expiry /
+  // emission_expiry — a vehicle is Compliant only if both dates are today or later.
+  const getVehicleCompliance = (vehicle) => {
+    if (!vehicle) {
+      return { compliant: false, insuranceExpired: false, emissionExpired: false };
+    }
+    const today = new Date();
+    const insuranceExpiry = vehicle.insurance_expiry ? new Date(vehicle.insurance_expiry) : null;
+    const emissionExpiry = vehicle.emission_expiry ? new Date(vehicle.emission_expiry) : null;
 
-    setHistoryRecords([newRecord, ...historyRecords]);
-    setIsSavedAlert(true);
-    setTimeout(() => setIsSavedAlert(false), 4000);
+    const insuranceExpired = insuranceExpiry ? today > insuranceExpiry : false;
+    const emissionExpired = emissionExpiry ? today > emissionExpiry : false;
+
+    return {
+      compliant: !insuranceExpired && !emissionExpired,
+      insuranceExpired,
+      emissionExpired,
+    };
+  };
+
+  useEffect(() => {
+    fetchDrivers();
+    fetchVehicles();
+  }, []);
+
+  const fetchDrivers = async () => {
+    try {
+      const res = await fetch("/api/drivers");
+
+      if (!res.ok) {
+        console.error(`Failed to load drivers (status ${res.status}).`);
+        return;
+      }
+
+      const data = await res.json();
+      setDrivers(data);
+      setFilteredDrivers(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchVehicles = async () => {
+    setVehiclesLoading(true);
+    setVehiclesError("");
+    try {
+      const res = await fetch("/api/vehicles");
+
+      if (!res.ok) {
+        let message = `Failed to load vehicles (status ${res.status}).`;
+        try {
+          const data = await res.json();
+          message = data.message || message;
+        } catch {
+          // Response had no JSON body (e.g. a 405) — keep the status-based message.
+        }
+        throw new Error(message);
+      }
+
+      const data = await res.json();
+      setVehicles(data);
+      setFilteredVehicles(data);
+    } catch (err) {
+      console.error(err);
+      setVehiclesError(err.message || "Could not load vehicles. Please refresh the page.");
+    } finally {
+      setVehiclesLoading(false);
+    }
+  };
+
+  const handleConfirmAssignment = async (e) => {
+    e.preventDefault();
+    setSubmitError("");
+
+    if (!selectedDriver || !selectedVehicle) {
+      setSubmitError("Please select both a driver and a vehicle before confirming.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/assignments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          vehicle_number: selectedVehicle.vehicle_number,
+          driver_name: selectedDriver.user?.full_name,
+          fleet_manager_id: null, // TODO: replace with the logged-in user's ID
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setSubmitError(data.message || "Failed to create assignment.");
+        return;
+      }
+
+      // Reflect the assignment the API actually created in the local history log
+      const created = data.assignment;
+      const newRecord = {
+        id: created?.id ?? `ASN-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+        driver: created?.driver?.user?.full_name ?? selectedDriver.user?.full_name ?? "Unknown Driver",
+        empId: selectedDriver.user?.id ?? "-",
+        license: selectedDriver.license_number ?? "-",
+        vehicle: created?.vehicle?.vehicle_number ?? selectedVehicle.vehicle_number ?? "-",
+        model: [selectedVehicle.brand, selectedVehicle.model].filter(Boolean).join(" ") || "-",
+        startDate: created?.assigned_date ?? startDate ?? "-",
+        endDate: "Indefinite",
+        status: created?.status ?? "ACTIVE",
+        region: "North Region",
+        mileage: selectedVehicle.current_mileage ?? "-",
+        compliance: "Valid",
+        notes: notes || "Newly confirmed assignment via Operations Hub",
+      };
+
+      setHistoryRecords([newRecord, ...historyRecords]);
+      setIsSavedAlert(true);
+      setTimeout(() => setIsSavedAlert(false), 4000);
+
+      // Reset the form for the next assignment
+      setSelectedDriver(null);
+      setSelectedVehicle(null);
+      setDriverSearch("");
+      setVehicleSearch("");
+      setStartDate("");
+      setEndDate("");
+      setNotes("");
+    } catch (err) {
+      console.error(err);
+      setSubmitError("Failed to create assignment.");
+    }
   };
 
   const filteredRecords = historyRecords.filter((rec) => {
@@ -232,7 +350,20 @@ export default function HistoryPage() {
             </div>
           )}
 
-          {/* VIEW MODE 1: ASSIGNMENT FORM & SUMMARY SIDEBAR (EXACT MATCH TO REFERENCE SCREENSHOT) */}
+          {/* Error Alert */}
+          {submitError && (
+            <div className="p-4 rounded-xl bg-[#ef4444]/10 border border-[#ef4444]/30 text-[#991b1b] text-xs font-medium flex items-center justify-between shadow-xs animate-fade-up">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#ef4444]">error</span>
+                <span>{submitError}</span>
+              </div>
+              <button onClick={() => setSubmitError("")} className="text-[#991b1b] hover:underline font-bold">
+                Dismiss
+              </button>
+            </div>
+          )}
+
+          {/* VIEW MODE 1: ASSIGNMENT FORM & SUMMARY SIDEBAR */}
           {activeView === "flow" && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               {/* LEFT FORM CONTAINER (Lg: 8 cols) */}
@@ -265,49 +396,89 @@ export default function HistoryPage() {
                         type="text"
                         placeholder="Search driver by name or ID..."
                         value={driverSearch}
-                        onChange={(e) => setDriverSearch(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setDriverSearch(value);
+                          setFilteredDrivers(
+                            drivers.filter((driver) =>
+                              driver.user?.full_name
+                                ?.toLowerCase()
+                                .includes(value.toLowerCase())
+                            )
+                          );
+                        }}
                         className="w-full pl-10 pr-4 py-2.5 bg-[#f8f9ff] border border-[#e2e8f0] rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#004ac6]/20 focus:border-[#004ac6] transition-all"
                       />
+
+                      {driverSearch && (
+                        <div className="mt-2 border border-[#e2e8f0] rounded-xl bg-white max-h-60 overflow-y-auto shadow-md absolute z-10 w-full">
+                          {filteredDrivers.length > 0 ? (
+                            filteredDrivers.map((driver) => (
+                              <div
+                                key={driver.id}
+                                onClick={() => {
+                                  setSelectedDriver(driver);
+                                  setDriverSearch("");
+                                }}
+                                className="p-3 cursor-pointer hover:bg-[#f8f9ff]"
+                              >
+                                <div className="font-semibold text-[#0b1c30]">
+                                  {driver.user?.full_name}
+                                </div>
+                                <div className="text-[10px] text-[#565e74]">
+                                  {driver.user?.email} &middot; {driver.license_number}
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="p-3 text-[#565e74]">No drivers match your search.</div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Selected Driver Card */}
                     <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        {/* Avatar Image Placeholder */}
-                        <div className="w-14 h-14 rounded-xl bg-[#3b82f6]/10 border border-[#3b82f6]/20 flex items-center justify-center font-bold text-lg text-[#004ac6] relative overflow-hidden">
-                          <span className="material-symbols-outlined text-[32px] text-[#004ac6]">person</span>
-                        </div>
-
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-[#737686] uppercase tracking-wider">DRIVER NAME</span>
+                      {selectedDriver ? (
+                        <>
+                          <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-xl bg-[#3b82f6]/10 border border-[#3b82f6]/20 flex items-center justify-center">
+                              <span className="material-symbols-outlined text-[32px] text-[#004ac6]">
+                                person
+                              </span>
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-sm">{selectedDriver.user?.full_name}</h3>
+                              <p className="text-xs text-gray-500">{selectedDriver.user?.email}</p>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-bold text-sm text-[#0b1c30]">{selectedDriver.name}</h3>
-                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#10b981]">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]"></span>
-                              Available
-                            </span>
+
+                          {/* Info Metadata Grid */}
+                          <div className="hidden sm:flex items-center gap-8 text-left">
+                            <div>
+                              <p className="text-[10px] font-bold text-[#737686] uppercase tracking-wider">EMP ID</p>
+                              <p className="font-semibold text-[#0b1c30] text-xs">{selectedDriver.user?.id}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-[#737686] uppercase tracking-wider">LICENSE</p>
+                              <p className="font-semibold text-[#0b1c30] text-xs">{selectedDriver.license_number}</p>
+                            </div>
                           </div>
-                        </div>
-                      </div>
 
-                      {/* Info Metadata Grid */}
-                      <div className="hidden sm:flex items-center gap-8 text-left">
-                        <div>
-                          <p className="text-[10px] font-bold text-[#737686] uppercase tracking-wider">EMP ID</p>
-                          <p className="font-semibold text-[#0b1c30] text-xs">{selectedDriver.empId}</p>
+                          {/* Clear Selection Button */}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDriver(null)}
+                            className="p-2 text-[#004ac6] hover:bg-[#dce9ff] rounded-lg transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                          </button>
+                        </>
+                      ) : (
+                        <div className="w-full text-center py-2 text-[#737686] font-medium">
+                          No driver selected — search above to choose one
                         </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-[#737686] uppercase tracking-wider">LICENSE</p>
-                          <p className="font-semibold text-[#0b1c30] text-xs">{selectedDriver.license}</p>
-                        </div>
-                      </div>
-
-                      {/* Edit Button */}
-                      <button type="button" className="p-2 text-[#004ac6] hover:bg-[#dce9ff] rounded-lg transition-colors">
-                        <span className="material-symbols-outlined text-[18px]">edit</span>
-                      </button>
+                      )}
                     </div>
                   </div>
 
@@ -329,40 +500,118 @@ export default function HistoryPage() {
                         type="text"
                         placeholder="Search vehicle by registration..."
                         value={vehicleSearch}
-                        onChange={(e) => setVehicleSearch(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setVehicleSearch(value);
+                          const query = value.toLowerCase();
+                          setFilteredVehicles(
+                            vehicles.filter(
+                              (vehicle) =>
+                                vehicle.vehicle_number?.toLowerCase().includes(query) ||
+                                vehicle.brand?.toLowerCase().includes(query) ||
+                                vehicle.model?.toLowerCase().includes(query)
+                            )
+                          );
+                        }}
                         className="w-full pl-10 pr-4 py-2.5 bg-[#f8f9ff] border border-[#e2e8f0] rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#004ac6]/20 focus:border-[#004ac6] transition-all"
                       />
+
+                      {vehicleSearch && (
+                        <div className="mt-2 border border-[#e2e8f0] rounded-xl bg-white max-h-60 overflow-y-auto shadow-md absolute z-10 w-full">
+                          {vehiclesLoading ? (
+                            <div className="p-3 text-[#565e74]">Loading vehicles...</div>
+                          ) : vehiclesError ? (
+                            <div className="p-3 text-[#991b1b]">{vehiclesError}</div>
+                          ) : filteredVehicles.length > 0 ? (
+                            filteredVehicles.map((vehicle) => {
+                              const { compliant } = getVehicleCompliance(vehicle);
+                              return (
+                                <div
+                                  key={vehicle.id}
+                                  onClick={() => {
+                                    setSelectedVehicle(vehicle);
+                                    setVehicleSearch("");
+                                  }}
+                                  className="p-3 cursor-pointer hover:bg-[#f8f9ff] flex items-center justify-between gap-2"
+                                >
+                                  <div>
+                                    <div className="font-semibold text-[#0b1c30]">
+                                      {vehicle.vehicle_number}
+                                    </div>
+                                    <div className="text-[10px] text-[#565e74]">
+                                      {[vehicle.brand, vehicle.model].filter(Boolean).join(" ")}
+                                    </div>
+                                  </div>
+                                  <span
+                                    className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
+                                      compliant ? "bg-[#ecfdf5] text-[#10b981]" : "bg-[#fef2f2] text-[#ef4444]"
+                                    }`}
+                                  >
+                                    {compliant ? "Compliant" : "Inactive"}
+                                  </span>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="p-3 text-[#565e74]">No vehicles match your search.</div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Selected Vehicle Card */}
                     <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        {/* Vehicle Image Box */}
-                        <div className="w-20 h-14 rounded-xl bg-[#2563eb]/10 border border-[#2563eb]/20 flex items-center justify-center text-[#004ac6] font-bold overflow-hidden">
-                          <span className="material-symbols-outlined text-[36px] text-[#004ac6]">local_shipping</span>
-                        </div>
+                      {selectedVehicle ? (
+                        <>
+                          <div className="flex items-center gap-4">
+                            {/* Vehicle Image Box */}
+                            <div className="w-20 h-14 rounded-xl bg-[#2563eb]/10 border border-[#2563eb]/20 flex items-center justify-center text-[#004ac6] font-bold overflow-hidden">
+                              <span className="material-symbols-outlined text-[36px] text-[#004ac6]">local_shipping</span>
+                            </div>
 
-                        <div>
-                          <p className="text-[10px] font-bold text-[#737686] uppercase tracking-wider">REGISTRATION</p>
-                          <h3 className="font-bold text-sm text-[#0b1c30]">{selectedVehicle.registration}</h3>
-                        </div>
-                      </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-[#737686] uppercase tracking-wider">REGISTRATION</p>
+                              <h3 className="font-bold text-sm text-[#0b1c30]">{selectedVehicle.vehicle_number}</h3>
+                            </div>
+                          </div>
 
-                      <div className="hidden sm:flex items-center gap-8">
-                        <div>
-                          <p className="text-[10px] font-bold text-[#737686] uppercase tracking-wider">MODEL</p>
-                          <p className="font-semibold text-[#0b1c30] text-xs">{selectedVehicle.model}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-[#737686] uppercase tracking-wider">MILEAGE</p>
-                          <p className="font-semibold text-[#0b1c30] text-xs">{selectedVehicle.mileage}</p>
-                        </div>
-                      </div>
+                          <div className="hidden sm:flex items-center gap-8">
+                            <div>
+                              <p className="text-[10px] font-bold text-[#737686] uppercase tracking-wider">MODEL</p>
+                              <p className="font-semibold text-[#0b1c30] text-xs">
+                                {[selectedVehicle.brand, selectedVehicle.model].filter(Boolean).join(" ") || "-"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-[#737686] uppercase tracking-wider">MILEAGE</p>
+                              <p className="font-semibold text-[#0b1c30] text-xs">{selectedVehicle.current_mileage ?? "-"}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-[#737686] uppercase tracking-wider">STATUS</p>
+                              <p
+                                className={`font-semibold text-xs ${
+                                  getVehicleCompliance(selectedVehicle).compliant ? "text-[#10b981]" : "text-[#ef4444]"
+                                }`}
+                              >
+                                {getVehicleCompliance(selectedVehicle).compliant ? "Compliant" : "Inactive"}
+                              </p>
+                            </div>
+                          </div>
 
-                      {/* Swap Button */}
-                      <button type="button" className="p-2 text-[#004ac6] hover:bg-[#dce9ff] rounded-lg transition-colors">
-                        <span className="material-symbols-outlined text-[18px]">swap_horiz</span>
-                      </button>
+                          {/* Clear Selection Button */}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedVehicle(null)}
+                            className="p-2 text-[#004ac6] hover:bg-[#dce9ff] rounded-lg transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">swap_horiz</span>
+                          </button>
+                        </>
+                      ) : (
+                        <div className="w-full text-center py-2 text-[#737686] font-medium">
+                          No vehicle selected — search above to choose one
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -375,44 +624,88 @@ export default function HistoryPage() {
                         </div>
                         <span>Compliance Check</span>
                       </div>
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#10b981]">
-                        <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                        <span>All Systems Operational</span>
-                      </span>
+                      {(() => {
+                        const { compliant } = getVehicleCompliance(selectedVehicle);
+                        return (
+                          <span
+                            className={`inline-flex items-center gap-1 text-xs font-semibold ${
+                              compliant ? "text-[#10b981]" : "text-[#ef4444]"
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-[16px]">
+                              {compliant ? "check_circle" : "error"}
+                            </span>
+                            <span>{!selectedVehicle ? "Select a Vehicle" : compliant ? "Compliant" : "Inactive"}</span>
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     {/* 4 Compliance Cards Grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      <div className="p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl space-y-1">
-                        <span className="text-[10px] font-bold text-[#737686] uppercase">Insurance</span>
-                        <p className="font-bold text-[#10b981] text-xs">Valid</p>
-                        <p className="text-[10px] text-[#565e74]">Expires 12/2025</p>
-                      </div>
+                      {(() => {
+                        const { insuranceExpired, emissionExpired } = getVehicleCompliance(selectedVehicle);
+                        return (
+                          <>
+                            <div className="p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl space-y-1">
+                              <span className="text-[10px] font-bold text-[#737686] uppercase">Insurance</span>
+                              <p className={`font-bold text-xs ${insuranceExpired ? "text-[#ef4444]" : "text-[#10b981]"}`}>
+                                {selectedVehicle ? (insuranceExpired ? "Expired" : "Valid") : "-"}
+                              </p>
+                              <p className="text-[10px] text-[#565e74]">
+                                {selectedVehicle?.insurance_expiry ? `Expires ${selectedVehicle.insurance_expiry}` : "No data"}
+                              </p>
+                            </div>
 
-                      <div className="p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl space-y-1">
-                        <span className="text-[10px] font-bold text-[#737686] uppercase">Inspection</span>
-                        <p className="font-bold text-[#10b981] text-xs">Valid</p>
-                        <p className="text-[10px] text-[#565e74]">Expires 08/2024</p>
-                      </div>
+                            <div className="p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl space-y-1">
+                              <span className="text-[10px] font-bold text-[#737686] uppercase">Inspection</span>
+                              <p className="font-bold text-[#565e74] text-xs">N/A</p>
+                              <p className="text-[10px] text-[#565e74]">Not tracked</p>
+                            </div>
 
-                      <div className="p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl space-y-1">
-                        <span className="text-[10px] font-bold text-[#737686] uppercase">Emission</span>
-                        <p className="font-bold text-[#10b981] text-xs">Valid</p>
-                        <p className="text-[10px] text-[#565e74]">Next: 01/2025</p>
-                      </div>
+                            <div className="p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl space-y-1">
+                              <span className="text-[10px] font-bold text-[#737686] uppercase">Emission</span>
+                              <p className={`font-bold text-xs ${emissionExpired ? "text-[#ef4444]" : "text-[#10b981]"}`}>
+                                {selectedVehicle ? (emissionExpired ? "Expired" : "Valid") : "-"}
+                              </p>
+                              <p className="text-[10px] text-[#565e74]">
+                                {selectedVehicle?.emission_expiry ? `Expires ${selectedVehicle.emission_expiry}` : "No data"}
+                              </p>
+                            </div>
 
-                      <div className="p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl space-y-1">
-                        <span className="text-[10px] font-bold text-[#737686] uppercase">Service</span>
-                        <p className="font-bold text-[#10b981] text-xs">Valid</p>
-                        <p className="text-[10px] text-[#565e74]">In 3,500 km</p>
-                      </div>
+                            <div className="p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl space-y-1">
+                              <span className="text-[10px] font-bold text-[#737686] uppercase">Service</span>
+                              <p className="font-bold text-[#565e74] text-xs">N/A</p>
+                              <p className="text-[10px] text-[#565e74]">Not tracked</p>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
 
-                    {/* Green Alert Banner */}
-                    <div className="p-3 bg-[#ecfdf5] border border-[#a7f3d0] rounded-xl flex items-center gap-2 text-[#065f46] text-xs font-semibold">
-                      <span className="material-symbols-outlined text-[18px]">verified</span>
-                      <span>Vehicle is eligible for assignment.</span>
-                    </div>
+                    {/* Compliance Alert Banner */}
+                    {(() => {
+                      const { compliant } = getVehicleCompliance(selectedVehicle);
+                      if (!selectedVehicle) {
+                        return (
+                          <div className="p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl flex items-center gap-2 text-[#565e74] text-xs font-semibold">
+                            <span className="material-symbols-outlined text-[18px]">info</span>
+                            <span>Select a vehicle to run its compliance check.</span>
+                          </div>
+                        );
+                      }
+                      return compliant ? (
+                        <div className="p-3 bg-[#ecfdf5] border border-[#a7f3d0] rounded-xl flex items-center gap-2 text-[#065f46] text-xs font-semibold">
+                          <span className="material-symbols-outlined text-[18px]">verified</span>
+                          <span>Vehicle is eligible for assignment.</span>
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-[#fef2f2] border border-[#fecaca] rounded-xl flex items-center gap-2 text-[#991b1b] text-xs font-semibold">
+                          <span className="material-symbols-outlined text-[18px]">warning</span>
+                          <span>Vehicle is not eligible for assignment — compliance document expired.</span>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* STEP 4: ASSIGNMENT DETAILS */}
@@ -488,24 +781,26 @@ export default function HistoryPage() {
                     <div className="pt-2 flex justify-between">
                       <span className="text-[#737686] font-semibold uppercase">DRIVER</span>
                       <div className="text-right">
-                        <p className="font-bold text-[#0b1c30]">{selectedDriver.name}</p>
-                        <p className="text-[10px] text-[#565e74]">{selectedDriver.empId}</p>
+                        <p className="font-bold text-[#0b1c30]">{selectedDriver?.user?.full_name ?? "Not selected"}</p>
+                        <p className="text-[10px] text-[#565e74]">{selectedDriver?.user?.id ?? ""}</p>
                       </div>
                     </div>
 
                     <div className="pt-2 flex justify-between">
                       <span className="text-[#737686] font-semibold uppercase">VEHICLE</span>
                       <div className="text-right">
-                        <p className="font-bold text-[#0b1c30]">{selectedVehicle.registration}</p>
-                        <p className="text-[10px] text-[#565e74]">{selectedVehicle.model}</p>
+                        <p className="font-bold text-[#0b1c30]">{selectedVehicle?.vehicle_number ?? "Not selected"}</p>
+                        <p className="text-[10px] text-[#565e74]">
+                          {[selectedVehicle?.brand, selectedVehicle?.model].filter(Boolean).join(" ")}
+                        </p>
                       </div>
                     </div>
 
                     <div className="pt-2 flex justify-between">
                       <span className="text-[#737686] font-semibold uppercase">PERIOD</span>
                       <div className="text-right">
-                        <p className="font-bold text-[#0b1c30]">Indefinite</p>
-                        <p className="text-[10px] text-[#565e74]">Starts Nov 15, 2023</p>
+                        <p className="font-bold text-[#0b1c30]">{endDate ? `${startDate || "-"} to ${endDate}` : "Indefinite"}</p>
+                        <p className="text-[10px] text-[#565e74]">{startDate ? `Starts ${startDate}` : "No start date set"}</p>
                       </div>
                     </div>
                   </div>
@@ -543,85 +838,39 @@ export default function HistoryPage() {
                   </div>
 
                   <div className="space-y-3 text-xs">
-                    {/* Activity Item 1 */}
-                    <div className="flex items-center justify-between p-2 rounded-xl hover:bg-[#f8fafc] transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#dce9ff] text-[#004ac6] flex items-center justify-center font-bold text-xs">
-                          SM
+                    {historyRecords.slice(0, 5).map((rec) => {
+                      const initials = rec.driver
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase();
+                      const isActive = rec.status === "ACTIVE";
+                      return (
+                        <div key={rec.id} className="flex items-center justify-between p-2 rounded-xl hover:bg-[#f8fafc] transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
+                                isActive ? "bg-[#dce9ff] text-[#004ac6]" : "bg-[#e2e8f0] text-[#565e74]"
+                              }`}
+                            >
+                              {initials}
+                            </div>
+                            <div>
+                              <p className="font-bold text-[#0b1c30]">{rec.driver}</p>
+                              <p className="text-[10px] text-[#565e74]">{rec.vehicle}</p>
+                            </div>
+                          </div>
+                          <span
+                            className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
+                              isActive ? "bg-[#ecfdf5] text-[#10b981]" : "bg-[#e2e8f0] text-[#565e74]"
+                            }`}
+                          >
+                            {rec.status}
+                          </span>
                         </div>
-                        <div>
-                          <p className="font-bold text-[#0b1c30]">Sara Miller</p>
-                          <p className="text-[10px] text-[#565e74]">Truck FG-201-B</p>
-                        </div>
-                      </div>
-                      <span className="px-2 py-0.5 bg-[#ecfdf5] text-[#10b981] rounded-md font-bold text-[10px]">
-                        ACTIVE
-                      </span>
-                    </div>
-
-                    {/* Activity Item 2 */}
-                    <div className="flex items-center justify-between p-2 rounded-xl hover:bg-[#f8fafc] transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#dce9ff] text-[#004ac6] flex items-center justify-center font-bold text-xs">
-                          JW
-                        </div>
-                        <div>
-                          <p className="font-bold text-[#0b1c30]">James Wilson</p>
-                          <p className="text-[10px] text-[#565e74]">Van FG-092-S</p>
-                        </div>
-                      </div>
-                      <span className="px-2 py-0.5 bg-[#ecfdf5] text-[#10b981] rounded-md font-bold text-[10px]">
-                        ACTIVE
-                      </span>
-                    </div>
-
-                    {/* Activity Item 3 */}
-                    <div className="flex items-center justify-between p-2 rounded-xl hover:bg-[#f8fafc] transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#e2e8f0] text-[#565e74] flex items-center justify-center font-bold text-xs">
-                          EL
-                        </div>
-                        <div>
-                          <p className="font-bold text-[#0b1c30]">Elena Lopez</p>
-                          <p className="text-[10px] text-[#565e74]">Truck FG-551-M</p>
-                        </div>
-                      </div>
-                      <span className="px-2 py-0.5 bg-[#e2e8f0] text-[#565e74] rounded-md font-bold text-[10px]">
-                        ENDED
-                      </span>
-                    </div>
-
-                    {/* Activity Item 4 */}
-                    <div className="flex items-center justify-between p-2 rounded-xl hover:bg-[#f8fafc] transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#e2e8f0] text-[#565e74] flex items-center justify-center font-bold text-xs">
-                          DK
-                        </div>
-                        <div>
-                          <p className="font-bold text-[#0b1c30]">David Kim</p>
-                          <p className="text-[10px] text-[#565e74]">Truck FG-118-K</p>
-                        </div>
-                      </div>
-                      <span className="px-2 py-0.5 bg-[#e2e8f0] text-[#565e74] rounded-md font-bold text-[10px]">
-                        ENDED
-                      </span>
-                    </div>
-
-                    {/* Activity Item 5 */}
-                    <div className="flex items-center justify-between p-2 rounded-xl hover:bg-[#f8fafc] transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#e2e8f0] text-[#565e74] flex items-center justify-center font-bold text-xs">
-                          RB
-                        </div>
-                        <div>
-                          <p className="font-bold text-[#0b1c30]">Ray Baxter</p>
-                          <p className="text-[10px] text-[#565e74]">Van FG-303-T</p>
-                        </div>
-                      </div>
-                      <span className="px-2 py-0.5 bg-[#e2e8f0] text-[#565e74] rounded-md font-bold text-[10px]">
-                        ENDED
-                      </span>
-                    </div>
+                      );
+                    })}
                   </div>
 
                   <div className="pt-2 text-center">

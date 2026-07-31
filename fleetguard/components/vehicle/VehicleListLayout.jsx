@@ -14,9 +14,13 @@ import { useRouter } from "next/navigation";
 export default function VehicleListLayout() {
   const router = useRouter();
 
+const handleRegisterVehicle = () => {
+    router.push("/vehicles/register");
+  };
 
   return (
     <DashboardLayout>
+      
       <div className="space-y-8">
 
         {/* Header */}
@@ -41,9 +45,8 @@ export default function VehicleListLayout() {
               Import CSV
             </button>
 
-            <button onClick={() => {
-              router.push("/vehicles/register");
-            }} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700">
+            <button onClick={handleRegisterVehicle} 
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700">
 
               <Plus size={18} />
 
